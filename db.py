@@ -1,4 +1,5 @@
- # static database for now
-stores = {}
+from flask_sqlalchemy import SQLAlchemy
 
-items = {}
+db = SQLAlchemy()
+
+
