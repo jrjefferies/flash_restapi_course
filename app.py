@@ -8,6 +8,7 @@ import models
 
 from resources.item import blp as ItemBlueprint
 from resources.store import blp as StoreBlueprint
+from resources.tag import blp as TagBlueprint
 
 def create_app(db_url=None):
     app = Flask(__name__)
@@ -23,8 +24,8 @@ def create_app(db_url=None):
         # if DATABASE_URL is defined it will be used, otherwise it will use sqlite
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url or "sqlite:///data.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["PROPAGATE_EXCEPTIONS"] = True
     db.init_app(app)
-
     api = Api(app)
 
     # @app.before_first_request
@@ -36,6 +37,7 @@ def create_app(db_url=None):
 
     api.register_blueprint(ItemBlueprint)
     api.register_blueprint(StoreBlueprint)
+    api.register_blueprint(TagBlueprint)
 
     return app
 
