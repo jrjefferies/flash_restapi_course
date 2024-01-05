@@ -28,10 +28,11 @@ def create_app(db_url=None):
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url or "sqlite:///data.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["PROPAGATE_EXCEPTIONS"] = True
-    db.init_app(app)
     app.config["JWT_SECRET_KEY"]  = "secret_antitamper" # python cli run secrets.SystemRandom().getrandbits(128) copy output (save somewhere safe env var etc)
-    jwt = JWTManager(app)
+    db.init_app(app)
     api = Api(app)
+
+    jwt = JWTManager(app)
 
     # @app.before_first_request
     # def create_tables():
