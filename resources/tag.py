@@ -5,8 +5,8 @@ from flask_smorest import Blueprint, abort
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from db import db
-from models import TagModel, StoreModel
-from schemas import TagSchema #, TagUpdateSchema
+from models import TagModel, StoreModel, ItemModel
+from schemas import TagSchema, TagAndItemSchema #, TagUpdateSchema
 
 
 blp = Blueprint("tags", __name__, description="Operations on Tags")
@@ -25,7 +25,7 @@ class TagInStore(MethodView):
         #     abort(400, message="A tag with tha name already exists in the store.")
         # tag = TagModel(**tag_data, store_id=store_id)
         tag = TagModel(**tag_data, store_id=store_id)
-        
+
         try:
             
             db.session.add(tag)
@@ -42,27 +42,21 @@ class Tag(MethodView):
         tag = TagModel.query.get_or_404(tag_id)
         return tag
     
-    # @blp.arguments(TagUpdateSchema)              #Order of decorators matters, in this case the arguments comes first the response later
-    # @blp.response(200, TagSchema)
-    # def put(self, tag_data, tag_id):   #Note arguments marshmallow data comes before the routes data
-    #     tag = TagModel.query.get(item_id)
-    #     if tag:     # idempotent (will create new item)
-    #         tag.price = tag_data["price"]
-    #         tag.name = tag_data["name"]
-    #     else:
-    #         tag = TagModel(tag_id, **tag_data)
-
-    #     db.session.add(tag)
-    #     db.session.commit()
-
-    #     return tag
-    
+    #this route is decorated with multiple response decorators
+    @blp.response( 202, description="Deletes a tag if no item is tagged with it", example={"message" "Tag deleted."})
+    @blp.alt_response(404, description="Tag not found.") 
+    @blp.alt_response(400, description="Returned if the tag is assigned to one or more items.  In this case, the tag is not deleted")                       
     def delete(self, tag_id):
         tag = TagModel.query.get_or_404(tag_id)
 
-        db.session.delete(tag)
-        db.session.commit()
-        return {"message": "Tag Deleted"}
+        if not tag.items:
+            db.session.delete(tag)
+            db.session.commit()
+            return {"message": "Tag Deleted"}
+        abort(
+            400,
+            message="Could not delte tag. Make sure tag is not associated with any item, then try again.", 
+        )
 
 
 
@@ -87,3 +81,35 @@ class Tag(MethodView):
 
 
 
+@blp.route("/item/<string:item_id>/tag/<string:tag_id>")
+class LinkTagsToItem(MethodView):
+    @blp.response(201, TagSchema)
+    def post(self, item_id, tag_id):
+        item = ItemModel.query.get_or_404(item_id)
+        tag = TagModel.query.get_or_404(tag_id)
+
+        item.tags.append(tag)    # this does the secondary table work in the background
+
+        try:          
+            db.session.add(item)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            abort(500, message=f"An error occured while tagging the item. {e}")
+
+        return item    
+    
+    @blp.response(201, TagAndItemSchema)
+    def delete(self,  item_id, tag_id):
+        item = ItemModel.query.get_or_404(item_id)
+        tag = TagModel.query.get_or_404(tag_id)
+
+        item.tags.remove(tag)    # this does the secondary table work in the background
+
+        try:
+            
+            db.session.add(item)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            abort(500, message=f"An error occured while untagging the item. {e}")
+
+        return{"message": "Item removed from tag", "item": item, "tag": tag  }   
