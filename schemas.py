@@ -42,3 +42,9 @@ class ItemUpdateSchema(Schema):
     price = fields.Float()
     store_id = fields.Int()
 
+class UserSchema(Schema):
+    id = fields.Int(dump_only=True)
+    username = fields.Str(required=True)
+    # password = fields.Str(required=True, load_only=True)  #load_only IMPORTANT as this is a secret
+    password = fields.Str(required=True)  #load_only IMPORTANT as this is a secret
+
