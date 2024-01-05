@@ -14,10 +14,7 @@ blp = Blueprint("users", __name__, description="Operations on users")
 @blp.route("/register")
 class UserRegister(MethodView):
     @blp.arguments(UserSchema)
-    @blp.response(200, UserSchema)
     def post(self, user_data):
-        # return {"message": "Got here."}, 200
-        # return user_data
         if UserModel.query.filter(UserModel.username == user_data["username"]).first():
             abort(409, message="A user with that username already exists.")
 
@@ -26,11 +23,11 @@ class UserRegister(MethodView):
             # password = user_data["password"]
             password = pbkdf2_sha256.hash(user_data["password"])
         )
-        # return user
         db.sesson.add(user)
         db.sesson.commit()
-        return user
         return {"message": "User created sucessfully."}, 201
+
+
     
 @blp.route("/user/<int:user_id>")
 class User(MethodView):
