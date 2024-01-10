@@ -6,10 +6,9 @@ from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from db import db
 from models import TagModel, StoreModel, ItemModel
-from schemas import TagSchema, TagAndItemSchema #, TagUpdateSchema
+from schemas import TagSchema, TagAndItemSchema
 
-
-blp = Blueprint("tags", __name__, description="Operations on Tags")
+blp = Blueprint("Tags", "tags", description="Operations on Tags")
 
 @blp.route("/store/<int:store_id>/tag")
 class TagInStore(MethodView):
@@ -23,7 +22,7 @@ class TagInStore(MethodView):
     def post(self,  tag_data, store_id):
         # if TagModel.query.filter(TagModel.store_id == store_id, TagModel.name == tag_data['name']).first():
         #     abort(400, message="A tag with tha name already exists in the store.")
-        # tag = TagModel(**tag_data, store_id=store_id)
+
         tag = TagModel(**tag_data, store_id=store_id)
 
         try:
@@ -31,9 +30,50 @@ class TagInStore(MethodView):
             db.session.add(tag)
             db.session.commit()
         except SQLAlchemyError as e:
-            abort(500, message=f"An error occured while inserting the tag. {e}")
+            abort(
+                500, 
+                message=f"An error occured while inserting the tag. {e}"
+            )
 
         return tag
+
+
+@blp.route("/item/<int:item_id>/tag/<int:tag_id>")
+class LinkTagsToItem(MethodView):
+    @blp.response(201, TagSchema)
+    def post(self, item_id, tag_id):
+        item = ItemModel.query.get_or_404(item_id)
+        tag = TagModel.query.get_or_404(tag_id)
+
+        if item.store.id != tag.store.id:
+            abort(400, message="Make sure item and tag belong to the same store before linking")
+
+        item.tags.append(tag)    # this does the secondary table work in the background
+
+        try:          
+            db.session.add(item)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            abort(500, message=f"An error occured while tagging the item. {e}")
+
+        return item    
+
+    @blp.response(201, TagAndItemSchema)
+    def delete(self,  item_id, tag_id):
+        item = ItemModel.query.get_or_404(item_id)
+        tag = TagModel.query.get_or_404(tag_id)
+
+        item.tags.remove(tag)    # this does the secondary table work in the background
+
+        try:
+            
+            db.session.add(item)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            abort(500, message=f"An error occured while untagging the item. {e}")
+
+        return{"message": "Item removed from tag", "item": item, "tag": tag  }     
+    
 
 @blp.route("/tag/<int:tag_id>")      # http://127.0.0.1:5000/item/ITEM_ID
 class Tag(MethodView):
@@ -80,39 +120,3 @@ class Tag(MethodView):
 #         return tag
 
 
-
-@blp.route("/item/<int:item_id>/tag/<int:tag_id>")
-class LinkTagsToItem(MethodView):
-    @blp.response(201, TagSchema)
-    def post(self, item_id, tag_id):
-        item = ItemModel.query.get_or_404(item_id)
-        tag = TagModel.query.get_or_404(tag_id)
-
-        if item.store.id != tag.store.id:
-            abort(400, message="Make sure item and tag belong to the same store before linking")
-
-        item.tags.append(tag)    # this does the secondary table work in the background
-
-        try:          
-            db.session.add(item)
-            db.session.commit()
-        except SQLAlchemyError as e:
-            abort(500, message=f"An error occured while tagging the item. {e}")
-
-        return item    
-    
-    @blp.response(201, TagAndItemSchema)
-    def delete(self,  item_id, tag_id):
-        item = ItemModel.query.get_or_404(item_id)
-        tag = TagModel.query.get_or_404(tag_id)
-
-        item.tags.remove(tag)    # this does the secondary table work in the background
-
-        try:
-            
-            db.session.add(item)
-            db.session.commit()
-        except SQLAlchemyError as e:
-            abort(500, message=f"An error occured while untagging the item. {e}")
-
-        return{"message": "Item removed from tag", "item": item, "tag": tag  }   
