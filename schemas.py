@@ -34,8 +34,6 @@ class TagAndItemSchema(Schema):
     item = fields.Nested(ItemSchema)
     tag = fields.Nested(TagSchema)
 
-
-
 # Update Schema
 class ItemUpdateSchema(Schema):
     name = fields.Str()
@@ -47,5 +45,3 @@ class UserSchema(Schema):
     username = fields.Str(required=True)
     password = fields.Str(required=True, load_only=True)
     # password = fields.Str(required=True, load_only=True)  #load_only IMPORTANT as this is a secret
-
-
