@@ -94,8 +94,8 @@ def create_app(db_url=None):
     # def create_tables():
     #     db.create_all()
 
-    with app.app_context():
-        db.create_all()
+    # with app.app_context():
+    #     db.create_all()
 
     api.register_blueprint(ItemBlueprint)
     api.register_blueprint(StoreBlueprint)
